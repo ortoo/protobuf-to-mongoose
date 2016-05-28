@@ -45,7 +45,10 @@ function schemaFromProtoSync(fname, messageName) {
       var typeName = field.type.name === 'message' ? field.resolvedType.name : field.type.name;
       var type = typeFromProto(typeName);
 
-      if (field.options['(oneOfReference)']) {
+      // Ignore _id fields - mongoose will add those automagically
+      if (field.name === '_id') {
+        return;
+      } else if (field.options['(oneOfReference)']) {
         // We're a reference of a oneOf set. Find out what paths are in the oneOf
         var oneof = TMessage.getChild(field.options['(oneOfReference)']);
         var oneOfPaths = oneof.fields.map((field) => `${prefix}${field.name}`);
