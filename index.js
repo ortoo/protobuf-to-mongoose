@@ -2,7 +2,7 @@
 
 const ProtoBuf = require('protobufjs');
 const mongoose = require('mongoose');
-const isEmpty = require('lodash.isEmpty');
+const isEmpty = require('lodash.isempty');
 
 const Schema = mongoose.Schema;
 const ObjectId = Schema.Types.ObjectId;
