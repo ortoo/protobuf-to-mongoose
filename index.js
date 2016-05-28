@@ -15,14 +15,14 @@ function schemaFromProtoSync(fname, messageName) {
   var TObj = builder.lookup(messageName);
 
   var completedSchemas = new Map(); // Maps message to schema
-  var virtuals = {};
+  var oneOfRefs = [];
   var validators = [];
 
   var schema = new Schema(schemaFromMessage(TObj, ''));
 
   // Add in any virtuals
-  for (let path in virtuals) {
-    schema.virtual(path).get(virtuals[path]);
+  for (let middleware of oneOfRefs) {
+    schema.pre('save', middleware);
   }
 
   // Add in the validators
@@ -49,50 +49,51 @@ function schemaFromProtoSync(fname, messageName) {
       // Ignore _id fields - mongoose will add those automagically
       if (field.name === '_id') {
         return;
-      } else if (field.options['(oneOfReference)']) {
-        // We're a reference of a oneOf set. Find out what paths are in the oneOf
-        var oneof = TMessage.getChild(field.options['(oneOfReference)']);
-        var oneOfPaths = oneof.fields.map((field) => `${prefix}${field.name}`);
-        virtuals[`${prefix}${field.name}`] = constructOneOfVirtual(oneOfPaths);
-      } else {
-        if (!type) {
-          // must reference a different message. Go and build that out
-          let typemsg = field.resolvedType;
-          if (!typemsg) {
-            throw new Error('Can\'t find the type ' + typeName);
-          }
-
-          type = schemaFromMessage(typemsg, `${prefix}${field.name}.`);
-
-          // The value is the type here
-          val = type;
-        } else {
-          if (field.options.hasOwnProperty('(objectId)')) {
-            type = ObjectId;
-
-            var objIdRef = field.options['(objectId)'];
-            if (objIdRef) {
-              val.ref = objIdRef;
-            }
-          }
-
-          if (field.options['(unique)']) {
-            val.unique = true;
-          }
-
-          val.type = type;
-
-          if (field.required || field.options['(required)']) {
-            val.required = true;
-          }
-        }
-
-        if (field.repeated) {
-          val = [val];
-        }
-
-        obj[field.name] = val;
       }
+
+      if (!type) {
+        // must reference a different message. Go and build that out
+        let typemsg = field.resolvedType;
+        if (!typemsg) {
+          throw new Error('Can\'t find the type ' + typeName);
+        }
+
+        type = schemaFromMessage(typemsg, `${prefix}${field.name}.`);
+
+        // The value is the type here
+        val = type;
+      } else {
+        if (field.options['(oneOfReference)']) {
+          let oneof = TMessage.getChild(field.options['(oneOfReference)']);
+          let oneOfPaths = oneof.fields.map((field) => `${prefix}${field.name}`);
+          oneOfRefs.push(constructOneOfMiddleware(`${prefix}${field.name}`, oneOfPaths));
+        }
+
+        if (field.options.hasOwnProperty('(objectId)')) {
+          type = ObjectId;
+
+          var objIdRef = field.options['(objectId)'];
+          if (objIdRef) {
+            val.ref = objIdRef;
+          }
+        }
+
+        if (field.options['(unique)']) {
+          val.unique = true;
+        }
+
+        val.type = type;
+
+        if (field.required || field.options['(required)']) {
+          val.required = true;
+        }
+      }
+
+      if (field.repeated) {
+        val = [val];
+      }
+
+      obj[field.name] = val;
     });
 
     // Add any oneof validators
@@ -136,19 +137,21 @@ function typeFromProto(type) {
   }
 }
 
-function constructOneOfVirtual(oneofPaths) {
-  return function() {
+function constructOneOfMiddleware(oneofName, oneofPaths) {
+  return function(next) {
     var pathInUse = oneofPaths.find((path) => this.get(path) && !isEmpty(this.get(path)));
 
     // Return the final part of the path
     var sep = pathInUse.split('.');
-    return sep[sep.length - 1];
+    this.set(oneofName, sep[sep.length - 1]);
+    next();
   };
 }
 
 function constructOneOfValidator(oneofName, paths) {
   return function(next) {
     // Check that only one of the paths is set
+    console.log(paths.map((path) => this.get(path)));
     var setPaths = paths.filter((path) => this.get(path) && !isEmpty(this.get(path)));
     if (setPaths.length > 1) {
       next(new Error(`Can only set one of the ${oneofName} paths. The following are set: ${setPaths.join(', ')}.`));
