@@ -2,6 +2,7 @@
 
 const ProtoBuf = require('protobufjs');
 const mongoose = require('mongoose');
+const isEmpty = require('lodash.isEmpty');
 
 const Schema = mongoose.Schema;
 const ObjectId = Schema.Types.ObjectId;
@@ -137,7 +138,7 @@ function typeFromProto(type) {
 
 function constructOneOfVirtual(oneofPaths) {
   return function() {
-    var pathInUse = oneofPaths.find((path) => this.get(path));
+    var pathInUse = oneofPaths.find((path) => this.get(path) && !isEmpty(this.get(path)));
 
     // Return the final part of the path
     var sep = pathInUse.split('.');
@@ -148,7 +149,7 @@ function constructOneOfVirtual(oneofPaths) {
 function constructOneOfValidator(oneofName, paths) {
   return function(next) {
     // Check that only one of the paths is set
-    var setPaths = paths.filter((path) => !!this.get(path));
+    var setPaths = paths.filter((path) => this.get(path) && !isEmpty(this.get(path)));
     if (setPaths.length > 1) {
       next(new Error(`Can only set one of the ${oneofName} paths. The following are set: ${setPaths.join(', ')}.`));
     } else {

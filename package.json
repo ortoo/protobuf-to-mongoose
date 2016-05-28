@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "dependencies": {
-    "lodash.isstring": "^4.0.1",
+    "lodash.isempty": "^4.2.1",
     "protobufjs": "^5.0.1"
   },
   "peerDependencies": {
