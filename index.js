@@ -142,8 +142,8 @@ function constructOneOfMiddleware(oneofName, oneofPaths) {
     var pathInUse = oneofPaths.find((path) => this.get(path) && !isEmpty(this.get(path)));
 
     // Return the final part of the path
-    var sep = pathInUse.split('.');
-    this.set(oneofName, sep[sep.length - 1]);
+    var sep = pathInUse && pathInUse.split('.');
+    this.set(oneofName, sep && sep[sep.length - 1]);
     next();
   };
 }
