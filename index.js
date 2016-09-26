@@ -12,99 +12,108 @@ module.exports = schemaFromProtoSync;
 function schemaFromProtoSync(fname, messageName) {
 
   const builder = ProtoBuf.loadProtoFile(fname);
-  var TObj = builder.lookup(messageName);
 
-  var completedSchemas = new Map(); // Maps message to schema
-  var oneOfRefs = [];
-  var validators = [];
-
-  var schema = new Schema(schemaFromMessage(TObj, ''));
-
-  // Add in any virtuals
-  for (let middleware of oneOfRefs) {
-    schema.pre('save', middleware);
+  if (messageName) {
+    return createSchema(messageName);
+  } else {
+    return createSchema;
   }
 
-  // Add in the validators
-  for (let validator of validators) {
-    schema.pre('validate', validator);
-  }
+  function createSchema(messageName) {
+    var TObj = builder.lookup(messageName);
 
-  return schema;
+    var completedSchemas = new Map(); // Maps message to schema
+    var oneOfRefs = [];
+    var validators = [];
 
-  // This is recursive
-  function schemaFromMessage(TMessage, prefix) {
+    var schema = new Schema(schemaFromMessage(TObj, ''));
 
-    if (completedSchemas.has(TMessage)) {
-      return completedSchemas.get(TMessage);
+    // Add in any virtuals
+    for (let middleware of oneOfRefs) {
+      schema.pre('save', middleware);
     }
 
-    var obj = {};
-    var fields = TMessage.getChildren(ProtoBuf.Reflect.Message.Field);
-    fields.forEach(function(field) {
-      var val = {};
-      var typeName = field.type.name === 'message' ? field.resolvedType.name : field.type.name;
-      var type = typeFromProto(typeName);
+    // Add in the validators
+    for (let validator of validators) {
+      schema.pre('validate', validator);
+    }
 
-      // Ignore _id fields - mongoose will add those automagically
-      if (field.name === '_id') {
-        return;
+    return schema;
+
+    // This is recursive
+    function schemaFromMessage(TMessage, prefix) {
+
+      if (completedSchemas.has(TMessage)) {
+        return completedSchemas.get(TMessage);
       }
 
-      if (!type) {
-        // must reference a different message. Go and build that out
-        let typemsg = field.resolvedType;
-        if (!typemsg) {
-          throw new Error('Can\'t find the type ' + typeName);
+      var obj = {};
+      var fields = TMessage.getChildren(ProtoBuf.Reflect.Message.Field);
+      fields.forEach(function(field) {
+        var val = {};
+        var typeName = field.type.name === 'message' ? field.resolvedType.name : field.type.name;
+        var type = typeFromProto(typeName);
+
+        // Ignore _id fields - mongoose will add those automagically
+        if (field.name === '_id') {
+          return;
         }
 
-        type = schemaFromMessage(typemsg, `${prefix}${field.name}.`);
+        if (!type) {
+          // must reference a different message. Go and build that out
+          let typemsg = field.resolvedType;
+          if (!typemsg) {
+            throw new Error('Can\'t find the type ' + typeName);
+          }
 
-        // The value is the type here
-        val = type;
-      } else {
-        if (field.options['(oneOfReference)']) {
-          let oneof = TMessage.getChild(field.options['(oneOfReference)']);
-          let oneOfPaths = oneof.fields.map((field) => `${prefix}${field.name}`);
-          oneOfRefs.push(constructOneOfMiddleware(`${prefix}${field.name}`, oneOfPaths));
-        }
+          type = schemaFromMessage(typemsg, `${prefix}${field.name}.`);
 
-        if (field.options.hasOwnProperty('(objectId)')) {
-          type = ObjectId;
+          // The value is the type here
+          val = type;
+        } else {
+          if (field.options['(oneOfReference)']) {
+            let oneof = TMessage.getChild(field.options['(oneOfReference)']);
+            let oneOfPaths = oneof.fields.map((field) => `${prefix}${field.name}`);
+            oneOfRefs.push(constructOneOfMiddleware(`${prefix}${field.name}`, oneOfPaths));
+          }
 
-          var objIdRef = field.options['(objectId)'];
-          if (objIdRef) {
-            val.ref = objIdRef;
+          if (field.options.hasOwnProperty('(objectId)')) {
+            type = ObjectId;
+
+            var objIdRef = field.options['(objectId)'];
+            if (objIdRef) {
+              val.ref = objIdRef;
+            }
+          }
+
+          if (field.options['(unique)']) {
+            val.unique = true;
+          }
+
+          val.type = type;
+
+          if (field.required || field.options['(required)']) {
+            val.required = true;
           }
         }
 
-        if (field.options['(unique)']) {
-          val.unique = true;
+        if (field.repeated) {
+          val = [val];
         }
 
-        val.type = type;
+        obj[field.name] = val;
+      });
 
-        if (field.required || field.options['(required)']) {
-          val.required = true;
-        }
-      }
+      // Add any oneof validators
+      var oneofs = TMessage.getChildren(ProtoBuf.Reflect.Message.OneOf);
+      oneofs.forEach(function(oneof) {
+        var oneofPaths = oneof.fields.map((field) => `${prefix}${field.name}`);
+        validators.push(constructOneOfValidator(`${prefix}${oneof.name}`, oneofPaths));
+      });
 
-      if (field.repeated) {
-        val = [val];
-      }
-
-      obj[field.name] = val;
-    });
-
-    // Add any oneof validators
-    var oneofs = TMessage.getChildren(ProtoBuf.Reflect.Message.OneOf);
-    oneofs.forEach(function(oneof) {
-      var oneofPaths = oneof.fields.map((field) => `${prefix}${field.name}`);
-      validators.push(constructOneOfValidator(`${prefix}${oneof.name}`, oneofPaths));
-    });
-
-    completedSchemas.set(TMessage, obj);
-    return obj;
+      completedSchemas.set(TMessage, obj);
+      return obj;
+    }
   }
 }
 
