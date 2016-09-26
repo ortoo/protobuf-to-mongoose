@@ -116,13 +116,17 @@ function typeFromProto(type) {
     case 'string':
     case 'bytes':
     case 'int64':
+    case 'sint64':
     case 'fixed64':
+    case 'sfixed64':
     case 'uint64':
     case 'Duration':
       return String;
 
     case 'int32':
+    case 'sint32':
     case 'fixed32':
+    case 'sfixed32':
     case 'uint32':
     case 'float':
     case 'double':
