@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "dependencies": {
+    "debug": "^2.2.0",
     "lodash.isempty": "^4.2.1",
     "protobufjs": "^5.0.1"
   },

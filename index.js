@@ -3,6 +3,7 @@
 const ProtoBuf = require('protobufjs');
 const mongoose = require('mongoose');
 const isEmpty = require('lodash.isempty');
+const debug = require('debug')('@ortoo/protobuf-to-mongoose');
 
 const Schema = mongoose.Schema;
 const ObjectId = Schema.Types.ObjectId;
@@ -10,6 +11,8 @@ const ObjectId = Schema.Types.ObjectId;
 module.exports = schemaFromProtoSync;
 
 function schemaFromProtoSync(fname, messageName) {
+
+  debug('Generating schema from', fname);
 
   const builder = ProtoBuf.loadProtoFile(fname);
 
@@ -50,14 +53,15 @@ function schemaFromProtoSync(fname, messageName) {
       var obj = {};
       var fields = TMessage.getChildren(ProtoBuf.Reflect.Message.Field);
       fields.forEach(function(field) {
+
+        // Ignore virtuals and _id fields - mongoose will add those automagically
+        if (field.options['(virtual)'] || field.name === '_id') {
+          return;
+        }
+
         var val = {};
         var typeName = field.type.name === 'message' ? field.resolvedType.name : field.type.name;
         var type = typeFromProto(typeName);
-
-        // Ignore _id fields - mongoose will add those automagically
-        if (field.name === '_id') {
-          return;
-        }
 
         if (!type) {
           // must reference a different message. Go and build that out
@@ -77,6 +81,11 @@ function schemaFromProtoSync(fname, messageName) {
             oneOfRefs.push(constructOneOfMiddleware(`${prefix}${field.name}`, oneOfPaths));
           }
 
+          if (field.type.name === 'enum') {
+            var enumVals = field.resolvedType.children.map(child => child.name);
+            val.enum = enumVals;
+          }
+
           if (field.options.hasOwnProperty('(objectId)')) {
             type = ObjectId;
 
@@ -86,9 +95,11 @@ function schemaFromProtoSync(fname, messageName) {
             }
           }
 
-          if (field.options['(unique)']) {
-            val.unique = true;
-          }
+          ['lowercase', 'uppercase', 'trim', 'min', 'max'].forEach(function (opt) {
+            if (field.options[`(${opt})`]) {
+              val[opt] = true;
+            }
+          });
 
           val.type = type;
 
@@ -129,6 +140,7 @@ function typeFromProto(type) {
     case 'fixed64':
     case 'sfixed64':
     case 'uint64':
+    case 'enum':
     case 'Duration':
       return String;
 
@@ -143,6 +155,7 @@ function typeFromProto(type) {
 
     case 'Any':
     case 'Struct':
+    case 'JSONObject':
       return Object;
 
     case 'Timestamp':
