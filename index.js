@@ -131,6 +131,7 @@ function schemaFromProtoSync(fname, messageName) {
 function typeFromProto(type) {
   switch (type) {
     case 'bool':
+    case 'BoolValue':
       return Boolean;
 
     case 'string':
@@ -142,6 +143,9 @@ function typeFromProto(type) {
     case 'uint64':
     case 'enum':
     case 'Duration':
+    case 'StringValue':
+    case 'Int64Value':
+    case 'UInt64Value':
       return String;
 
     case 'int32':
@@ -151,6 +155,10 @@ function typeFromProto(type) {
     case 'uint32':
     case 'float':
     case 'double':
+    case 'Int32Value':
+    case 'UInt32Value':
+    case 'FloatValue':
+    case 'DoubleValue':
       return Number;
 
     case 'Any':
