@@ -160,6 +160,9 @@ function typeFromProto(type) {
 
     case 'Timestamp':
       return Date;
+
+    case 'ObjectId':
+      return ObjectId;
   }
 }
 
