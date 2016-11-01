@@ -61,16 +61,28 @@ function schemaFromProtoSync(fname, messageName) {
 
         var val = {};
         var typeName = field.type.name === 'message' ? field.resolvedType.name : field.type.name;
+        var repeated = field.repeated;
+        var resolvedType = field.resolvedType;
+
+        // We handle wrappers (i.e. messages that wrap a value to allow us to detect their
+        // presence on the wire or not)
+        var wrapperMatch = typeName.match(/^(\w+)(Array|Value)$/);
+        if (wrapperMatch) {
+          let valField = field.resolvedType.getChild('value');
+          typeName = valField.type.name === 'message' ? valField.resolvedType.name : valField.type.name;
+          repeated = valField.repeated;
+          resolvedType = valField.resolvedType;
+        }
+
         var type = typeFromProto(typeName);
 
         if (!type) {
           // must reference a different message. Go and build that out
-          let typemsg = field.resolvedType;
-          if (!typemsg) {
+          if (!resolvedType) {
             throw new Error('Can\'t find the type ' + typeName);
           }
 
-          type = schemaFromMessage(typemsg, `${prefix}${field.name}.`);
+          type = schemaFromMessage(resolvedType, `${prefix}${field.name}.`);
 
           // The value is the type here
           val = type;
@@ -81,8 +93,8 @@ function schemaFromProtoSync(fname, messageName) {
             oneOfRefs.push(constructOneOfMiddleware(`${prefix}${field.name}`, oneOfPaths));
           }
 
-          if (field.type.name === 'enum') {
-            var enumVals = field.resolvedType.children.map(child => child.name);
+          if (typeName === 'enum') {
+            var enumVals = resolvedType.children.map(child => child.name);
             val.enum = enumVals;
           }
 
@@ -108,7 +120,7 @@ function schemaFromProtoSync(fname, messageName) {
           }
         }
 
-        if (field.repeated) {
+        if (repeated) {
           val = [val];
         }
 
@@ -129,9 +141,9 @@ function schemaFromProtoSync(fname, messageName) {
 }
 
 function typeFromProto(type) {
+
   switch (type) {
     case 'bool':
-    case 'BoolValue':
       return Boolean;
 
     case 'string':
@@ -143,9 +155,6 @@ function typeFromProto(type) {
     case 'uint64':
     case 'enum':
     case 'Duration':
-    case 'StringValue':
-    case 'Int64Value':
-    case 'UInt64Value':
       return String;
 
     case 'int32':
@@ -155,10 +164,6 @@ function typeFromProto(type) {
     case 'uint32':
     case 'float':
     case 'double':
-    case 'Int32Value':
-    case 'UInt32Value':
-    case 'FloatValue':
-    case 'DoubleValue':
       return Number;
 
     case 'Any':
