@@ -74,7 +74,7 @@ function schemaFromProtoSync(fname, messageName) {
           resolvedType = valField.resolvedType;
         }
 
-        var type = typeFromProto(typeName);
+        var type = field.keyType ? Object : typeFromProto(typeName);
 
         if (!type) {
           // must reference a different message. Go and build that out
