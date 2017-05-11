@@ -1,6 +1,6 @@
 {
   "name": "@ortoo/protobuf-to-mongoose",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "description": "",
   "main": "index.js",
   "dependencies": {
@@ -13,9 +13,6 @@
   },
   "devDependencies": {
     "eslint": "^2.10.2"
-  },
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
