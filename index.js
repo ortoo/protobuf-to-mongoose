@@ -63,18 +63,21 @@ function schemaFromProtoSync(fname, messageName) {
         var typeName = field.type.name === 'message' ? field.resolvedType.name : field.type.name;
         var repeated = field.repeated;
         var resolvedType = field.resolvedType;
+        var isMap = field.map;
 
         // We handle wrappers (i.e. messages that wrap a value to allow us to detect their
         // presence on the wire or not)
         var wrapperMatch = typeName.match(/^(\w+)(Array|Value)$/);
+
         if (wrapperMatch) {
           let valField = field.resolvedType.getChild('value');
           typeName = valField.type.name === 'message' ? valField.resolvedType.name : valField.type.name;
           repeated = valField.repeated;
           resolvedType = valField.resolvedType;
+          isMap = valField.map;
         }
 
-        var type = field.keyType ? Object : typeFromProto(typeName);
+        var type = isMap ? Object : typeFromProto(typeName);
 
         if (!type) {
           // must reference a different message. Go and build that out
