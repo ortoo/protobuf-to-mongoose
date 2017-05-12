@@ -67,7 +67,7 @@ function schemaFromProtoSync(fname, messageName) {
 
         // We handle wrappers (i.e. messages that wrap a value to allow us to detect their
         // presence on the wire or not)
-        var wrapperMatch = typeName.match(/^(\w+)(Array|Value)$/);
+        var wrapperMatch = typeName.match(/^(\w+)(Array|Value|Map)$/);
 
         if (wrapperMatch) {
           let valField = field.resolvedType.getChild('value');
