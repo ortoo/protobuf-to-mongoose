@@ -124,7 +124,7 @@ function schemaFromProtoSync(fname, messageName) {
         }
 
         if (repeated) {
-          val = [val];
+          val = {type: [val], default: void 0};
         }
 
         obj[field.name] = val;
@@ -196,7 +196,7 @@ function constructOneOfMiddleware(oneofName, oneofPaths) {
 function constructOneOfValidator(oneofName, paths) {
   return function(next) {
     // Check that only one of the paths is set
-    var setPaths = paths.filter((path) => this.get(path) && !isEmpty(this.get(path)));
+    var setPaths = paths.filter((path) => this.isInit(path) && this.get(path) && !isEmpty(this.get(path)));
     if (setPaths.length > 1) {
       next(new Error(`Can only set one of the ${oneofName} paths. The following are set: ${setPaths.join(', ')}.`));
     } else {
