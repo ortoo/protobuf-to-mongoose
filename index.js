@@ -90,12 +90,6 @@ function schemaFromProtoSync(fname, messageName) {
           // The value is the type here
           val = type;
         } else {
-          if (field.options['(oneOfReference)']) {
-            let oneof = TMessage.getChild(field.options['(oneOfReference)']);
-            let oneOfPaths = oneof.fields.map((field) => `${prefix}${field.name}`);
-            oneOfRefs.push(constructOneOfMiddleware(`${prefix}${field.name}`, oneOfPaths));
-          }
-
           if (typeName === 'enum') {
             var enumVals = resolvedType.children.map(child => child.name);
             val.enum = enumVals;
@@ -130,10 +124,12 @@ function schemaFromProtoSync(fname, messageName) {
         obj[field.name] = val;
       });
 
-      // Add any oneof validators
+      // Add any oneof fields and validators
       var oneofs = TMessage.getChildren(ProtoBuf.Reflect.Message.OneOf);
       oneofs.forEach(function(oneof) {
+        obj[oneof.name] = String;
         var oneofPaths = oneof.fields.map((field) => `${prefix}${field.name}`);
+        oneOfRefs.push(constructOneOfMiddleware(prefix, oneof.name, oneofPaths));
         validators.push(constructOneOfValidator(`${prefix}${oneof.name}`, oneofPaths));
       });
 
@@ -182,13 +178,17 @@ function typeFromProto(type) {
   }
 }
 
-function constructOneOfMiddleware(oneofName, oneofPaths) {
+function constructOneOfMiddleware(prefix, oneofName, oneofPaths) {
   return function(next) {
-    var pathInUse = oneofPaths.find((path) => this.get(path) && !isEmpty(this.get(path)));
+    var pathInUse = this.get(`${prefix}${oneofName}`);
 
-    // Return the final part of the path
-    var sep = pathInUse && pathInUse.split('.');
-    this.set(oneofName, sep && sep[sep.length - 1]);
+    if (pathInUse) {
+      oneofPaths.forEach(path => {
+        if (`${prefix}${pathInUse}` !== path) {
+          this.set(path, undefined);
+        }
+      });
+    }
     next();
   };
 }
