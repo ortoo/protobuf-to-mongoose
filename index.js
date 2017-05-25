@@ -118,7 +118,7 @@ function schemaFromProtoSync(fname, messageName) {
         }
 
         if (repeated) {
-          val = {type: [val], default: void 0};
+          val = {type: [val] /* , default: void 0 */};
         }
 
         obj[field.name] = val;
