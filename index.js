@@ -44,7 +44,7 @@ function schemaFromProtoSync(fname, messageName) {
     return schema;
 
     // This is recursive
-    function schemaFromMessage(TMessage, prefix) {
+    function schemaFromMessage(TMessage, prefix, parentRepeated) {
 
       if (completedSchemas.has(TMessage)) {
         return completedSchemas.get(TMessage);
@@ -53,9 +53,8 @@ function schemaFromProtoSync(fname, messageName) {
       var obj = {};
       var fields = TMessage.getChildren(ProtoBuf.Reflect.Message.Field);
       fields.forEach(function(field) {
-
-        // Ignore virtuals and _id fields - mongoose will add those automagically
-        if (field.options['(virtual)'] || field.name === '_id') {
+        // Ignore virtuals  - mongoose will add those automagically
+        if (field.options['(virtual)'] || (field.name === '_id' && (!prefix || parentRepeated))) {
           return;
         }
 
@@ -85,7 +84,7 @@ function schemaFromProtoSync(fname, messageName) {
             throw new Error('Can\'t find the type ' + typeName);
           }
 
-          type = schemaFromMessage(resolvedType, `${prefix}${field.name}.`);
+          type = schemaFromMessage(resolvedType, `${prefix}${field.name}.`, repeated);
 
           // The value is the type here
           val = type;

@@ -9,7 +9,7 @@
     "protobufjs": "^5.0.1"
   },
   "peerDependencies": {
-    "mongoose": "^4.4.19"
+    "mongoose": "^4.4.19 || ^5.0.0"
   },
   "devDependencies": {
     "eslint": "^2.10.2"
