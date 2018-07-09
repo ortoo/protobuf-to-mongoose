@@ -167,6 +167,8 @@ function typeFromProto(type) {
     case 'Any':
     case 'Struct':
     case 'JSONObject':
+    case 'HybridObject':
+    case 'BSONObject':
       return Object;
 
     case 'Timestamp':
