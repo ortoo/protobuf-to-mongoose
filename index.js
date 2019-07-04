@@ -86,7 +86,7 @@ function schemaFromProtoSync(fname, messageName) {
           type = schemaFromMessage(resolvedType, `${prefix}${field.name}.`, repeated);
 
           // The value is the type here
-          val = new Schema(type, { id: false });
+          val = repeated ? new Schema(type, { id: false }) : type;
         } else {
           if (typeName === 'enum') {
             var enumVals = resolvedType.children.map(child => child.name);
