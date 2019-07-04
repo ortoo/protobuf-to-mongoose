@@ -11,7 +11,6 @@ const ObjectId = Schema.Types.ObjectId;
 module.exports = schemaFromProtoSync;
 
 function schemaFromProtoSync(fname, messageName) {
-
   debug('Generating schema from', fname);
 
   const builder = ProtoBuf.loadProtoFile(fname);
@@ -29,7 +28,7 @@ function schemaFromProtoSync(fname, messageName) {
     var oneOfRefs = [];
     var validators = [];
 
-    var schema = new Schema(schemaFromMessage(TObj, ''));
+    var schema = new Schema(schemaFromMessage(TObj, ''), { id: false });
 
     // Add in any virtuals
     for (let middleware of oneOfRefs) {
@@ -45,7 +44,6 @@ function schemaFromProtoSync(fname, messageName) {
 
     // This is recursive
     function schemaFromMessage(TMessage, prefix, parentRepeated) {
-
       if (completedSchemas.has(TMessage)) {
         return completedSchemas.get(TMessage);
       }
@@ -70,7 +68,8 @@ function schemaFromProtoSync(fname, messageName) {
 
         if (wrapperMatch) {
           let valField = field.resolvedType.getChild('value');
-          typeName = valField.type.name === 'message' ? valField.resolvedType.name : valField.type.name;
+          typeName =
+            valField.type.name === 'message' ? valField.resolvedType.name : valField.type.name;
           repeated = valField.repeated;
           resolvedType = valField.resolvedType;
           isMap = valField.map;
@@ -81,13 +80,13 @@ function schemaFromProtoSync(fname, messageName) {
         if (!type) {
           // must reference a different message. Go and build that out
           if (!resolvedType) {
-            throw new Error('Can\'t find the type ' + typeName);
+            throw new Error("Can't find the type " + typeName);
           }
 
           type = schemaFromMessage(resolvedType, `${prefix}${field.name}.`, repeated);
 
           // The value is the type here
-          val = type;
+          val = new Schema(type, { id: false });
         } else {
           if (typeName === 'enum') {
             var enumVals = resolvedType.children.map(child => child.name);
@@ -103,7 +102,7 @@ function schemaFromProtoSync(fname, messageName) {
             }
           }
 
-          ['lowercase', 'uppercase', 'trim', 'min', 'max'].forEach(function (opt) {
+          ['lowercase', 'uppercase', 'trim', 'min', 'max'].forEach(function(opt) {
             if (field.options[`(${opt})`]) {
               val[opt] = true;
             }
@@ -117,7 +116,7 @@ function schemaFromProtoSync(fname, messageName) {
         }
 
         if (repeated) {
-          val = {type: [val] /* , default: void 0 */};
+          val = { type: [val] /* , default: void 0 */ };
         }
 
         obj[field.name] = val;
@@ -127,7 +126,7 @@ function schemaFromProtoSync(fname, messageName) {
       var oneofs = TMessage.getChildren(ProtoBuf.Reflect.Message.OneOf);
       oneofs.forEach(function(oneof) {
         obj[oneof.name] = String;
-        var oneofPaths = oneof.fields.map((field) => `${prefix}${field.name}`);
+        var oneofPaths = oneof.fields.map(field => `${prefix}${field.name}`);
         oneOfRefs.push(constructOneOfMiddleware(prefix, oneof.name, oneofPaths));
         validators.push(constructOneOfValidator(`${prefix}${oneof.name}`, oneofPaths));
       });
@@ -139,7 +138,6 @@ function schemaFromProtoSync(fname, messageName) {
 }
 
 function typeFromProto(type) {
-
   switch (type) {
     case 'bool':
       return Boolean;
@@ -197,9 +195,17 @@ function constructOneOfMiddleware(prefix, oneofName, oneofPaths) {
 function constructOneOfValidator(oneofName, paths) {
   return function(next) {
     // Check that only one of the paths is set
-    var setPaths = paths.filter((path) => this.isInit(path) && this.get(path) && !isEmpty(this.get(path)));
+    var setPaths = paths.filter(
+      path => this.isInit(path) && this.get(path) && !isEmpty(this.get(path))
+    );
     if (setPaths.length > 1) {
-      next(new Error(`Can only set one of the ${oneofName} paths. The following are set: ${setPaths.join(', ')}.`));
+      next(
+        new Error(
+          `Can only set one of the ${oneofName} paths. The following are set: ${setPaths.join(
+            ', '
+          )}.`
+        )
+      );
     } else {
       next();
     }
