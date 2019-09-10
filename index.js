@@ -31,7 +31,7 @@ function schemaFromProtoSync(fname, messageName) {
     var schema = new Schema(schemaFromMessage(TObj, ''), {
       id: false,
       collation: {
-        locale: 'en_GB',
+        locale: 'en',
         caseLevel: false,
         strength: 1
       }
