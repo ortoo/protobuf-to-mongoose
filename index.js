@@ -28,7 +28,15 @@ function schemaFromProtoSync(fname, messageName) {
     var oneOfRefs = [];
     var validators = [];
 
-    var schema = new Schema(schemaFromMessage(TObj, ''), { id: false });
+    var schema = new Schema(schemaFromMessage(TObj, ''), {
+      id: false,
+      collation: {
+        locale: 'en_GB',
+        caseLevel: false,
+        strength: 1
+      }
+    });
+    
 
     // Add in any virtuals
     for (let middleware of oneOfRefs) {
