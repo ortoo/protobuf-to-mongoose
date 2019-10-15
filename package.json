@@ -6,13 +6,13 @@
   "dependencies": {
     "debug": "^2.2.0",
     "lodash.isempty": "^4.2.1",
-    "protobufjs": "^5.0.1"
+    "protobufjs": "^6.0.1"
   },
   "peerDependencies": {
     "mongoose": "^4.4.19 || ^5.0.0"
   },
   "devDependencies": {
-    "eslint": "^2.10.2"
+    "eslint": "^3.11.1"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
