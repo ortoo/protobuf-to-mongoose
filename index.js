@@ -10,6 +10,14 @@ const ObjectId = Schema.Types.ObjectId;
 
 module.exports = schemaFromProtoSync;
 
+const maxDate = new Date('2099-12-31T23:59:59.999Z');
+const sensibleDateValidator = {
+  message: 'validation of `{PATH}` failed with value `{VALUE}` - the date is waaay in the future and therefore almost certainly incorrect',
+  validator: (val) => {
+    return val <= maxDate;
+  }
+}
+
 function schemaFromProtoSync(fname, messageName) {
   debug('Generating schema from', fname);
 
@@ -115,6 +123,10 @@ function schemaFromProtoSync(fname, messageName) {
               val[opt] = true;
             }
           });
+
+          if (type === Date) {
+            val.validate = sensibleDateValidator;
+          }
 
           val.type = type;
 
