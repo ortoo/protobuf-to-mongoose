@@ -13,7 +13,7 @@ module.exports = schemaFromProtoSync;
 const maxDate = new Date('2099-12-31T23:59:59.999Z');
 const minDate = new Date('1800-01-01T00:00:00.000Z');
 const sensibleDateValidator = {
-  message: 'validation of `{PATH}` failed with value `{VALUE}` - the date is waaay in the future and therefore almost certainly incorrect',
+  message: 'validation of `{PATH}` failed with value `{VALUE}` - the date is either waaay in the future or waaay in the past and therefore almost certainly incorrect',
   validator: (val) => {
     return val <= maxDate && val >= minDate;
   }
