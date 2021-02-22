@@ -8,7 +8,14 @@ const debug = require('debug')('@ortoo/protobuf-to-mongoose');
 const Schema = mongoose.Schema;
 const ObjectId = Schema.Types.ObjectId;
 
+const COLLATION_OPTIONS = {
+  locale: 'en',
+  caseLevel: false,
+  strength: 1
+};
+
 module.exports = schemaFromProtoSync;
+module.exports.COLLATION_OPTIONS = COLLATION_OPTIONS;
 
 const maxDate = new Date('2099-12-31T23:59:59.999Z');
 const minDate = new Date('1800-01-01T00:00:00.000Z');
@@ -39,11 +46,7 @@ function schemaFromProtoSync(fname, messageName) {
 
     var schema = new Schema(schemaFromMessage(TObj, ''), {
       id: false,
-      collation: {
-        locale: 'en',
-        caseLevel: false,
-        strength: 1
-      }
+      collation: COLLATION_OPTIONS
     });
     
 
