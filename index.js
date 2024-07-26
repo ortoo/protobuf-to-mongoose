@@ -6,12 +6,12 @@ const isEmpty = require('lodash.isempty');
 const debug = require('debug')('@ortoo/protobuf-to-mongoose');
 
 const Schema = mongoose.Schema;
-const ObjectId = Schema.Types.ObjectId;
+const ObjectId = mongoose.Types.ObjectId;
 
 const COLLATION_OPTIONS = {
   locale: 'en',
   caseLevel: false,
-  strength: 1
+  strength: 1,
 };
 
 module.exports = schemaFromProtoSync;
@@ -20,11 +20,12 @@ module.exports.COLLATION_OPTIONS = COLLATION_OPTIONS;
 const maxDate = new Date('2099-12-31T23:59:59.999Z');
 const minDate = new Date('1800-01-01T00:00:00.000Z');
 const sensibleDateValidator = {
-  message: 'validation of `{PATH}` failed with value `{VALUE}` - the date is either waaay in the future or waaay in the past and therefore almost certainly incorrect',
+  message:
+    'validation of `{PATH}` failed with value `{VALUE}` - the date is either waaay in the future or waaay in the past and therefore almost certainly incorrect',
   validator: (val) => {
     return val <= maxDate && val >= minDate;
-  }
-}
+  },
+};
 
 function schemaFromProtoSync(fname, messageName) {
   debug('Generating schema from', fname);
@@ -46,9 +47,8 @@ function schemaFromProtoSync(fname, messageName) {
 
     var schema = new Schema(schemaFromMessage(TObj, ''), {
       id: false,
-      collation: COLLATION_OPTIONS
+      collation: COLLATION_OPTIONS,
     });
-    
 
     // Add in any virtuals
     for (let middleware of oneOfRefs) {
@@ -70,14 +70,20 @@ function schemaFromProtoSync(fname, messageName) {
 
       var obj = {};
       var fields = TMessage.getChildren(ProtoBuf.Reflect.Message.Field);
-      fields.forEach(function(field) {
+      fields.forEach(function (field) {
         // Ignore virtuals  - mongoose will add those automagically
-        if (field.options['(virtual)'] || (field.name === '_id' && (!prefix || parentRepeated))) {
+        if (
+          field.options['(virtual)'] ||
+          (field.name === '_id' && (!prefix || parentRepeated))
+        ) {
           return;
         }
 
         var val = {};
-        var typeName = field.type.name === 'message' ? field.resolvedType.name : field.type.name;
+        var typeName =
+          field.type.name === 'message'
+            ? field.resolvedType.name
+            : field.type.name;
         var repeated = field.repeated;
         var resolvedType = field.resolvedType;
         var isMap = field.map;
@@ -89,7 +95,9 @@ function schemaFromProtoSync(fname, messageName) {
         if (wrapperMatch) {
           let valField = field.resolvedType.getChild('value');
           typeName =
-            valField.type.name === 'message' ? valField.resolvedType.name : valField.type.name;
+            valField.type.name === 'message'
+              ? valField.resolvedType.name
+              : valField.type.name;
           repeated = valField.repeated;
           resolvedType = valField.resolvedType;
           isMap = valField.map;
@@ -100,20 +108,26 @@ function schemaFromProtoSync(fname, messageName) {
         if (!type) {
           // must reference a different message. Go and build that out
           if (!resolvedType) {
-            throw new Error("Can't find the type " + typeName);
+            throw new Error('Can\'t find the type ' + typeName);
           }
 
-          type = schemaFromMessage(resolvedType, `${prefix}${field.name}.`, repeated);
+          type = schemaFromMessage(
+            resolvedType,
+            `${prefix}${field.name}.`,
+            repeated
+          );
 
           // The value is the type here
           val = repeated ? new Schema(type, { id: false }) : type;
         } else {
           if (typeName === 'enum') {
-            var enumVals = resolvedType.children.map(child => child.name);
+            var enumVals = resolvedType.children.map((child) => child.name);
             val.enum = enumVals;
           }
 
-          if (field.options.hasOwnProperty('(objectId)')) {
+          if (
+            Object.prototype.hasOwnProperty.call(field.options, '(objectId)')
+          ) {
             type = ObjectId;
 
             var objIdRef = field.options['(objectId)'];
@@ -122,7 +136,9 @@ function schemaFromProtoSync(fname, messageName) {
             }
           }
 
-          ['lowercase', 'uppercase', 'trim', 'min', 'max'].forEach(function(opt) {
+          ['lowercase', 'uppercase', 'trim', 'min', 'max'].forEach(function (
+            opt
+          ) {
             if (field.options[`(${opt})`]) {
               val[opt] = true;
             }
@@ -148,11 +164,15 @@ function schemaFromProtoSync(fname, messageName) {
 
       // Add any oneof fields and validators
       var oneofs = TMessage.getChildren(ProtoBuf.Reflect.Message.OneOf);
-      oneofs.forEach(function(oneof) {
+      oneofs.forEach(function (oneof) {
         obj[oneof.name] = String;
-        var oneofPaths = oneof.fields.map(field => `${prefix}${field.name}`);
-        oneOfRefs.push(constructOneOfMiddleware(prefix, oneof.name, oneofPaths));
-        validators.push(constructOneOfValidator(`${prefix}${oneof.name}`, oneofPaths));
+        var oneofPaths = oneof.fields.map((field) => `${prefix}${field.name}`);
+        oneOfRefs.push(
+          constructOneOfMiddleware(prefix, oneof.name, oneofPaths)
+        );
+        validators.push(
+          constructOneOfValidator(`${prefix}${oneof.name}`, oneofPaths)
+        );
       });
 
       completedSchemas.set(TMessage, obj);
@@ -202,11 +222,11 @@ function typeFromProto(type) {
 }
 
 function constructOneOfMiddleware(prefix, oneofName, oneofPaths) {
-  return function(next) {
+  return function (next) {
     var pathInUse = this.get(`${prefix}${oneofName}`);
 
     if (pathInUse) {
-      oneofPaths.forEach(path => {
+      oneofPaths.forEach((path) => {
         if (`${prefix}${pathInUse}` !== path) {
           this.set(path, undefined);
         }
@@ -217,10 +237,10 @@ function constructOneOfMiddleware(prefix, oneofName, oneofPaths) {
 }
 
 function constructOneOfValidator(oneofName, paths) {
-  return function(next) {
+  return function (next) {
     // Check that only one of the paths is set
     var setPaths = paths.filter(
-      path => this.isInit(path) && this.get(path) && !isEmpty(this.get(path))
+      (path) => this.isInit(path) && this.get(path) && !isEmpty(this.get(path))
     );
     if (setPaths.length > 1) {
       next(
