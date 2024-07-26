@@ -1,6 +1,6 @@
 {
   "name": "@ortoo/protobuf-to-mongoose",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "",
   "main": "index.js",
   "dependencies": {
