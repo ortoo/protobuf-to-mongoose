@@ -15,7 +15,7 @@ importers:
         specifier: ^4.4.0
         version: 4.4.0
       mongoose:
-        specifier: ^4.4.19 || ^5.0.0 || ^6.0.0
+        specifier: ^4.4.19 || ^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0
         version: 6.13.0(@aws-sdk/client-sso-oidc@3.620.0(@aws-sdk/client-sts@3.620.0))
       protobufjs:
         specifier: ^7.3.2
