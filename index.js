@@ -6,7 +6,7 @@ const isEmpty = require('lodash.isempty');
 const debug = require('debug')('@ortoo/protobuf-to-mongoose');
 
 const Schema = mongoose.Schema;
-const ObjectId = Schema.Types.ObjectId;
+const ObjectId = mongoose.Types.ObjectId;
 
 const COLLATION_OPTIONS = {
   locale: 'en',
