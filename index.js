@@ -1,15 +1,15 @@
-'use strict';
+"use strict";
 
-const ProtoBuf = require('protobufjs');
-const mongoose = require('mongoose');
-const isEmpty = require('lodash.isempty');
-const debug = require('debug')('@ortoo/protobuf-to-mongoose');
+const ProtoBuf = require("protobufjs");
+const mongoose = require("mongoose");
+const isEmpty = require("lodash.isempty");
+const debug = require("debug")("@ortoo/protobuf-to-mongoose");
 
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
 
 const COLLATION_OPTIONS = {
-  locale: 'en',
+  locale: "en",
   caseLevel: false,
   strength: 1,
 };
@@ -17,20 +17,20 @@ const COLLATION_OPTIONS = {
 module.exports = schemaFromProtoSync;
 module.exports.COLLATION_OPTIONS = COLLATION_OPTIONS;
 
-const maxDate = new Date('2099-12-31T23:59:59.999Z');
-const minDate = new Date('1800-01-01T00:00:00.000Z');
+const maxDate = new Date("2099-12-31T23:59:59.999Z");
+const minDate = new Date("1800-01-01T00:00:00.000Z");
 const sensibleDateValidator = {
   message:
-    'validation of `{PATH}` failed with value `{VALUE}` - the date is either waaay in the future or waaay in the past and therefore almost certainly incorrect',
+    "validation of `{PATH}` failed with value `{VALUE}` - the date is either waaay in the future or waaay in the past and therefore almost certainly incorrect",
   validator: (val) => {
     return val <= maxDate && val >= minDate;
   },
 };
 
 function schemaFromProtoSync(fname, messageName) {
-  debug('Generating schema from', fname);
+  debug("Generating schema from", fname);
 
-  const builder = ProtoBuf.loadSync(fname);
+  const builder = ProtoBuf.loadProtoFile(fname);
 
   if (messageName) {
     return createSchema(messageName);
@@ -45,19 +45,19 @@ function schemaFromProtoSync(fname, messageName) {
     var oneOfRefs = [];
     var validators = [];
 
-    var schema = new Schema(schemaFromMessage(TObj, ''), {
+    var schema = new Schema(schemaFromMessage(TObj, ""), {
       id: false,
       collation: COLLATION_OPTIONS,
     });
 
     // Add in any virtuals
     for (let middleware of oneOfRefs) {
-      schema.pre('save', middleware);
+      schema.pre("save", middleware);
     }
 
     // Add in the validators
     for (let validator of validators) {
-      schema.pre('validate', validator);
+      schema.pre("validate", validator);
     }
 
     return schema;
@@ -73,15 +73,15 @@ function schemaFromProtoSync(fname, messageName) {
       fields.forEach(function (field) {
         // Ignore virtuals  - mongoose will add those automagically
         if (
-          field.options['(virtual)'] ||
-          (field.name === '_id' && (!prefix || parentRepeated))
+          field.options["(virtual)"] ||
+          (field.name === "_id" && (!prefix || parentRepeated))
         ) {
           return;
         }
 
         var val = {};
         var typeName =
-          field.type.name === 'message'
+          field.type.name === "message"
             ? field.resolvedType.name
             : field.type.name;
         var repeated = field.repeated;
@@ -93,9 +93,9 @@ function schemaFromProtoSync(fname, messageName) {
         var wrapperMatch = typeName.match(/^(\w+)(Array|Value|Map)$/);
 
         if (wrapperMatch) {
-          let valField = field.resolvedType.getChild('value');
+          let valField = field.resolvedType.getChild("value");
           typeName =
-            valField.type.name === 'message'
+            valField.type.name === "message"
               ? valField.resolvedType.name
               : valField.type.name;
           repeated = valField.repeated;
@@ -108,7 +108,7 @@ function schemaFromProtoSync(fname, messageName) {
         if (!type) {
           // must reference a different message. Go and build that out
           if (!resolvedType) {
-            throw new Error('Can\'t find the type ' + typeName);
+            throw new Error("Can't find the type " + typeName);
           }
 
           type = schemaFromMessage(
@@ -120,23 +120,23 @@ function schemaFromProtoSync(fname, messageName) {
           // The value is the type here
           val = repeated ? new Schema(type, { id: false }) : type;
         } else {
-          if (typeName === 'enum') {
+          if (typeName === "enum") {
             var enumVals = resolvedType.children.map((child) => child.name);
             val.enum = enumVals;
           }
 
           if (
-            Object.prototype.hasOwnProperty.call(field.options, '(objectId)')
+            Object.prototype.hasOwnProperty.call(field.options, "(objectId)")
           ) {
             type = ObjectId;
 
-            var objIdRef = field.options['(objectId)'];
+            var objIdRef = field.options["(objectId)"];
             if (objIdRef) {
               val.ref = objIdRef;
             }
           }
 
-          ['lowercase', 'uppercase', 'trim', 'min', 'max'].forEach(function (
+          ["lowercase", "uppercase", "trim", "min", "max"].forEach(function (
             opt
           ) {
             if (field.options[`(${opt})`]) {
@@ -150,7 +150,7 @@ function schemaFromProtoSync(fname, messageName) {
 
           val.type = type;
 
-          if (field.required || field.options['(required)']) {
+          if (field.required || field.options["(required)"]) {
             val.required = true;
           }
         }
@@ -183,40 +183,40 @@ function schemaFromProtoSync(fname, messageName) {
 
 function typeFromProto(type) {
   switch (type) {
-    case 'bool':
+    case "bool":
       return Boolean;
 
-    case 'string':
-    case 'bytes':
-    case 'int64':
-    case 'sint64':
-    case 'fixed64':
-    case 'sfixed64':
-    case 'uint64':
-    case 'enum':
-    case 'Duration':
+    case "string":
+    case "bytes":
+    case "int64":
+    case "sint64":
+    case "fixed64":
+    case "sfixed64":
+    case "uint64":
+    case "enum":
+    case "Duration":
       return String;
 
-    case 'int32':
-    case 'sint32':
-    case 'fixed32':
-    case 'sfixed32':
-    case 'uint32':
-    case 'float':
-    case 'double':
+    case "int32":
+    case "sint32":
+    case "fixed32":
+    case "sfixed32":
+    case "uint32":
+    case "float":
+    case "double":
       return Number;
 
-    case 'Any':
-    case 'Struct':
-    case 'JSONObject':
-    case 'HybridObject':
-    case 'BSONObject':
+    case "Any":
+    case "Struct":
+    case "JSONObject":
+    case "HybridObject":
+    case "BSONObject":
       return Object;
 
-    case 'Timestamp':
+    case "Timestamp":
       return Date;
 
-    case 'ObjectId':
+    case "ObjectId":
       return ObjectId;
   }
 }
@@ -246,7 +246,7 @@ function constructOneOfValidator(oneofName, paths) {
       next(
         new Error(
           `Can only set one of the ${oneofName} paths. The following are set: ${setPaths.join(
-            ', '
+            ", "
           )}.`
         )
       );
