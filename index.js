@@ -30,7 +30,7 @@ const sensibleDateValidator = {
 function schemaFromProtoSync(fname, messageName) {
   debug('Generating schema from', fname);
 
-  const builder = ProtoBuf.loadProtoFile(fname);
+  const builder = ProtoBuf.loadSync(fname);
 
   if (messageName) {
     return createSchema(messageName);
